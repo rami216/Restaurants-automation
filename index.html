@@ -90,8 +90,7 @@
 
   <header id="header">Restaurant Chat</header>
   <main id="chatWindow">
-    <!-- messages will be injected here -->
-  </main>
+    </main>
   <footer>
     <input type="text" id="chatInput" placeholder="Type your message…" autocomplete="off" />
     <button id="sendButton" disabled>Send</button>
@@ -99,13 +98,16 @@
 
   <script>
     (function() {
-      // 1) Extract restaurant_id from query string
-      function getRestaurantId() {
+      // 1) Extract restaurant_id and restaurant_name from query string
+      function getQueryParams() {
         const params = new URLSearchParams(window.location.search);
-        return params.get('restaurant_id');
+        return {
+          id: params.get('restaurant_id'),
+          name: params.get('restaurant_name') // Get the new 'restaurant_name' parameter
+        };
       }
 
-      const restaurantId = getRestaurantId();
+      const { id: restaurantId, name: restaurantName } = getQueryParams(); // Destructure to get both
       const headerEl = document.getElementById('header');
       const chatWindow = document.getElementById('chatWindow');
       const chatInput = document.getElementById('chatInput');
@@ -122,7 +124,11 @@
       }
 
       // 3) Update header to show which restaurant the user is chatting with
-      headerEl.textContent = `Chatting with Restaurant ${restaurantId}`;
+      if (restaurantName) {
+        headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`; // Use the name if available
+      } else {
+        headerEl.textContent = `Chatting with Restaurant ${restaurantId}`; // Fallback to ID if name is missing
+      }
 
       // 4) Enable send button when user types
       chatInput.addEventListener('input', () => {
@@ -154,7 +160,7 @@
         chatInput.value = '';
         sendButton.disabled = true;
 
-        // 8) Call the n8n Webhook
+        // 8) Call the n8n Webhook (this webhook URL remains the same, it uses restaurantId)
         const webhookUrl = `https://rami215.app.n8n.cloud/webhook/1e2a0f28-3026-4f54-8ed5-822dc076a180/chat/${encodeURIComponent(restaurantId)}`;
 
         try {
