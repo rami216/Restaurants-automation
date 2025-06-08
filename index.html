@@ -115,7 +115,7 @@
         // Use the n8n webhook URL from Workflow 1 (Trigger URL).
         // restaurantId is still in the URL path, but userSessionId is in the body.
         const n8nBaseWebhookUrl = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b'; 
-        const webhookUrl = `<span class="math-inline">\{n8nBaseWebhookUrl\}/chat/</span>{encodeURIComponent(restaurantId)}`; // Only restaurantId in path
+        const webhookUrl = `${n8nBaseWebhookUrl}/chat/${encodeURIComponent(restaurantId)}`; // Only restaurantId in path
 
         try {
           const typingNode = document.createElement('div');
