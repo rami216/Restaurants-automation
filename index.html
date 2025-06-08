@@ -12,7 +12,13 @@
     .message { margin-bottom: 10px; display: flex; }
     .message.user .bubble { background: #3498db; color: white; margin-left: auto; }
     .message.bot .bubble { background: #ecf0f1; color: #2c3e50; margin-right: auto; }
-    .bubble { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; }
+    .bubble {
+      padding: 10px 15px;
+      border-radius: 15px;
+      max-width: 70%;
+      word-wrap: break-word;
+      white-space: pre-wrap; /* <--- ADDED THIS LINE */
+    }
     footer { padding: 10px 20px; background: #fff; border-top: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
     input[type="text"] { flex: 1; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 10px 15px; font-size: 1rem; background: #2ecc71; border: none; border-radius: 4px; color: white; cursor: pointer; }
@@ -93,7 +99,7 @@
         msgDiv.className = 'message ' + sender;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text;
+        bubble.textContent = text; // This will now respect \n due to white-space: pre-wrap;
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
