@@ -4,86 +4,20 @@
   <meta charset="UTF-8" />
   <title>Restaurant Chat</title>
   <style>
-    /* Simple reset */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      background: #2c3e50;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 1.25rem;
-    }
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-    .message {
-      margin-bottom: 10px;
-      display: flex;
-    }
-    .message.user .bubble {
-      background: #3498db;
-      color: white;
-      margin-left: auto;
-    }
-    .message.bot .bubble {
-      background: #ecf0f1;
-      color: #2c3e50;
-      margin-right: auto;
-    }
-    .bubble {
-      padding: 10px 15px;
-      border-radius: 15px;
-      max-width: 70%;
-      word-wrap: break-word;
-    }
-    footer {
-      padding: 10px 20px;
-      background: #fff;
-      border-top: 1px solid #ddd;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px 15px;
-      font-size: 1rem;
-      background: #2ecc71;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #95a5a6;
-      cursor: not-allowed;
-    }
-    .notification {
-      text-align: center;
-      padding: 10px;
-      background: #f1c40f;
-      color: #2c3e50;
-      font-weight: bold;
-    }
+    /* Your existing CSS styles go here */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; flex-direction: column; height: 100vh; }
+    header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 1.25rem; }
+    main { flex: 1; overflow-y: auto; padding: 20px; }
+    .message { margin-bottom: 10px; display: flex; }
+    .message.user .bubble { background: #3498db; color: white; margin-left: auto; }
+    .message.bot .bubble { background: #ecf0f1; color: #2c3e50; margin-right: auto; }
+    .bubble { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; }
+    footer { padding: 10px 20px; background: #fff; border-top: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
+    input[type="text"] { flex: 1; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 15px; font-size: 1rem; background: #2ecc71; border: none; border-radius: 4px; color: white; cursor: pointer; }
+    button:disabled { background: #95a5a6; cursor: not-allowed; }
+    .notification { text-align: center; padding: 10px; background: #f1c40f; color: #2c3e50; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -98,16 +32,34 @@
 
   <script>
     (function() {
+      // Function to generate a UUID (Unique User Session ID)
+      function generateUUID() {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+              var r = Math.random() * 16 | 0,
+                  v = c == 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+          });
+      }
+
+      // Get or create a unique user session ID and store it in localStorage
+      let userSessionId = localStorage.getItem('userSessionId');
+      if (!userSessionId) {
+          userSessionId = generateUUID();
+          localStorage.setItem('userSessionId', userSessionId);
+      }
+      console.log("Current User Session ID:", userSessionId); // For debugging purposes
+
       // 1) Extract restaurant_id and restaurant_name from query string
       function getQueryParams() {
         const params = new URLSearchParams(window.location.search);
         return {
           id: params.get('restaurant_id'),
-          name: params.get('restaurant_name') // Get the new 'restaurant_name' parameter
+          name: params.get('restaurant_name')
         };
       }
 
-      const { id: restaurantId, name: restaurantName } = getQueryParams(); // Destructure to get both
+      const { id: restaurantId, name: restaurantName } = getQueryParams(); // Correctly gets from query params
+
       const headerEl = document.getElementById('header');
       const chatWindow = document.getElementById('chatWindow');
       const chatInput = document.getElementById('chatInput');
@@ -125,9 +77,9 @@
 
       // 3) Update header to show which restaurant the user is chatting with
       if (restaurantName) {
-        headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`; // Use the name if available
+        headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`;
       } else {
-        headerEl.textContent = `Chatting with Restaurant ${restaurantId}`; // Fallback to ID if name is missing
+        headerEl.textContent = `Chatting with Restaurant ${restaurantId}`;
       }
 
       // 4) Enable send button when user types
@@ -144,7 +96,6 @@
         bubble.textContent = text;
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
-        // scroll to bottom
         chatWindow.scrollTop = chatWindow.scrollHeight;
       }
 
@@ -155,16 +106,18 @@
       sendButton.addEventListener('click', async () => {
         const userText = chatInput.value.trim();
         if (!userText) return;
-        // Display user message
+
         appendMessage(userText, 'user');
         chatInput.value = '';
         sendButton.disabled = true;
 
-        // 8) Call the n8n Webhook (this webhook URL remains the same, it uses restaurantId)
-        const webhookUrl = `https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/${encodeURIComponent(restaurantId)}`;
+        // 8) Call the n8n Webhook:
+        // Use the n8n webhook URL from Workflow 1 (Trigger URL).
+        // restaurantId is still in the URL path, but userSessionId is in the body.
+        const n8nBaseWebhookUrl = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b'; 
+        const webhookUrl = `<span class="math-inline">\{n8nBaseWebhookUrl\}/chat/</span>{encodeURIComponent(restaurantId)}`; // Only restaurantId in path
 
         try {
-          // Show a “typing…” indicator
           const typingNode = document.createElement('div');
           typingNode.className = 'message bot';
           typingNode.id = 'typingIndicator';
@@ -172,30 +125,31 @@
           chatWindow.appendChild(typingNode);
           chatWindow.scrollTop = chatWindow.scrollHeight;
 
-          // POST the user’s message to the webhook
           const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ message: userText })
+            // --- IMPORTANT CHANGE HERE: userSessionId included in the JSON body ---
+            body: JSON.stringify({ 
+                message: userText,
+                userSessionId: userSessionId // Sending userSessionId in the body
+            })
           });
-          // Remove typing indicator
+
           document.getElementById('typingIndicator').remove();
 
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
           }
           const data = await response.json();
-          // data should be { "response": "<AI’s answer>" }
           appendMessage(data.response, 'bot');
         } catch (err) {
-          // Remove typing indicator if still present
           const indicator = document.getElementById('typingIndicator');
           if (indicator) indicator.remove();
 
           appendMessage('❌ Error contacting the server. Please try again.', 'bot');
-          console.error(err);
+          console.error('Fetch error:', err);
         }
       });
 
