@@ -45,7 +45,7 @@
       let availableLocations = []; // Array of { location_id, location_name } objects
 
       // --- N8N Webhook URLs ---
-      // IMPORTANT: REPLACE 'YOUR_WORKFLOW3_WEBHOOK_ID' with the actual ID from your N8N Workflow 3 Webhook
+      // IMPORTANT: These URLs should match your n8n workflows
       const N8N_WORKFLOW3_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/';
       const N8N_WORKFLOW2_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/'; // Your existing Workflow 2 URL
 
@@ -74,6 +74,7 @@
       }
 
       function appendMessage(text, sender) {
+        console.log(`Appending message: [${sender}] "${text}"`); // DIAGNOSTIC: Check what text is being appended
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ' + sender;
         const bubble = document.createElement('div');
@@ -154,6 +155,12 @@
         }
       });
 
+      // NEW: Event listener to dynamically enable/disable send button
+      chatInput.addEventListener('input', () => {
+          sendButton.disabled = chatInput.value.trim().length === 0;
+      });
+
+
       async function sendMessage() {
         const userText = chatInput.value.trim();
         if (!userText) return;
@@ -171,8 +178,7 @@
             }
             // If location was just chosen, the current message was for selection.
             // Wait for the next user message for actual chat.
-            // Alternatively, you could resend the original userText with the newly selected locationId
-            // but for simplicity, let's wait for next message.
+            // For simplicity, let's wait for next message.
             enableInput();
             return;
         }
@@ -207,7 +213,7 @@
             throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
           }
           const data = await response.json();
-          appendMessage(data.response, 'bot');
+          appendMessage(data.response, 'bot'); // Assuming Workflow 2 returns { response: "bot's message" }
         } catch (err) {
           const indicator = document.getElementById('typingIndicator');
           if (indicator) indicator.remove();
