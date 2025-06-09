@@ -126,12 +126,20 @@
       async function handleLocationSelection(userText) {
           // Try to find a matching location name
           let matchedLocation = null;
-          for (const loc of availableLocations) {
-              if (userText.toLowerCase().includes(loc.location_name.toLowerCase())) {
-                  matchedLocation = loc;
-                  break;
+          // Check for numerical input first
+          const numInput = parseInt(userText);
+          if (!isNaN(numInput) && numInput > 0 && numInput <= availableLocations.length) {
+              matchedLocation = availableLocations[numInput - 1];
+          } else {
+              // Then check for name match (case-insensitive)
+              for (const loc of availableLocations) {
+                  if (userText.toLowerCase().includes(loc.location_name.toLowerCase())) {
+                      matchedLocation = loc;
+                      break;
+                  }
               }
           }
+
 
           if (matchedLocation) {
               selectedLocationId = matchedLocation.location_id;
@@ -141,7 +149,7 @@
               return true; // Location selected successfully
           } else {
               // No match, re-prompt the user
-              let promptMessage = 'Please select a branch by typing its name or number:\n';
+              let promptMessage = 'Sorry, I don\'t recognize that branch. Please select a branch by typing its **name** or **number** from the list:\n';
               availableLocations.forEach((loc, index) => {
                   promptMessage += `${index + 1}. ${loc.location_name}\n`;
               });
@@ -174,15 +182,32 @@
         chatInput.value = '';
         disableInput(); // Disable input while processing
 
-        // --- Logic for Location Selection (if not not already selected) ---
+        // NEW LOGIC: Check for "change branch" command BEFORE checking selectedLocationId
+        if (userText.toLowerCase() === 'change branch' || userText.toLowerCase() === 'switch branch' || userText.toLowerCase() === 'new branch') {
+            selectedLocationId = ''; // Reset the selected location
+            // Corrected appendMessage call
+            appendMessage('Okay, resetting the selected branch. Please choose a new branch:', 'bot');
+
+            // Re-initiate the location prompt using the same logic as DCL
+            const queryParams = getQueryParams();
+            const restaurantName = queryParams.restaurant_name || 'Restaurant';
+
+            let locationPrompt = 'Welcome! Which branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
+            availableLocations.forEach((loc, index) => {
+                locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+            });
+            // Corrected appendMessage call
+            appendMessage(locationPrompt, 'bot');
+            enableInput();
+            return; // Stop further processing for this message
+        }
+
+        // --- Original Logic for Location Selection (if not already selected) ---
         if (!selectedLocationId) {
             const locationChosen = await handleLocationSelection(userText);
             if (!locationChosen) {
-                // If location not chosen, do not proceed with sending to N8N
                 return;
             }
-            // If location was just chosen, the current message was for selection.
-            // Wait for the next user message for actual chat.
             enableInput();
             return;
         }
