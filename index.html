@@ -73,13 +73,14 @@
         };
       }
 
+      // Corrected appendMessage function
       function appendMessage(text, sender) {
-        console.log(`Appending message: [${sender}] "${text}"`); // DIAGNOSTIC: Check what text is being appended
+        console.log(`Appending message: [${sender}] "${text}"`); // Diagnostic: Check what text is being appended
         const msgDiv = document.createElement('div');
-        msgDiv.className = 'message ' + sender;
+        msgDiv.className = 'message ' + sender; // Correctly sets 'message bot' or 'message user'
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text;
+        bubble.textContent = text; // Correctly sets the actual message text
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -99,7 +100,8 @@
       // --- New: Fetch Locations from Workflow 3 ---
       async function fetchLocations(restaurantId) {
           disableInput(); // Disable input while fetching
-          appendMessage('bot', 'Fetching available branches...');
+          // Corrected appendMessage call
+          appendMessage('Fetching available branches...', 'bot');
           const url = `${N8N_WORKFLOW3_BASE_URL}${encodeURIComponent(restaurantId)}`;
           try {
               const response = await fetch(url);
@@ -112,7 +114,8 @@
               return data;
           } catch (error) {
               console.error('Error fetching locations:', error);
-              appendMessage('bot', 'Failed to load branches. Please try refreshing the page or check the restaurant ID.');
+              // Corrected appendMessage call
+              appendMessage('Failed to load branches. Please try refreshing the page or check the restaurant ID.', 'bot');
               return [];
           } finally {
               // We'll re-enable input after handling location choice
@@ -132,7 +135,8 @@
 
           if (matchedLocation) {
               selectedLocationId = matchedLocation.location_id;
-              appendMessage('bot', `Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`);
+              // Corrected appendMessage call
+              appendMessage(`Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`, 'bot');
               enableInput(); // Enable input for general chat
               return true; // Location selected successfully
           } else {
@@ -141,7 +145,8 @@
               availableLocations.forEach((loc, index) => {
                   promptMessage += `${index + 1}. ${loc.location_name}\n`;
               });
-              appendMessage('bot', promptMessage);
+              // Corrected appendMessage call
+              appendMessage(promptMessage, 'bot');
               enableInput(); // Keep input enabled for re-selection
               return false; // Location not yet selected
           }
@@ -169,7 +174,7 @@
         chatInput.value = '';
         disableInput(); // Disable input while processing
 
-        // --- Logic for Location Selection (if not already selected) ---
+        // --- Logic for Location Selection (if not not already selected) ---
         if (!selectedLocationId) {
             const locationChosen = await handleLocationSelection(userText);
             if (!locationChosen) {
@@ -178,7 +183,6 @@
             }
             // If location was just chosen, the current message was for selection.
             // Wait for the next user message for actual chat.
-            // For simplicity, let's wait for next message.
             enableInput();
             return;
         }
@@ -202,7 +206,7 @@
             body: JSON.stringify({
                 message: userText,
                 userSessionId: userSessionId,
-                location_id: selectedLocationId // THIS IS THE NEW CRITICAL PIECE!
+                location_id: selectedLocationId // THIS IS THE CRITICAL PIECE sent to N8n
             })
           });
 
@@ -213,11 +217,13 @@
             throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
           }
           const data = await response.json();
+          // Corrected appendMessage call
           appendMessage(data.response, 'bot'); // Assuming Workflow 2 returns { response: "bot's message" }
         } catch (err) {
           const indicator = document.getElementById('typingIndicator');
           if (indicator) indicator.remove();
 
+          // Corrected appendMessage call
           appendMessage('❌ Error contacting the server. Please try again.', 'bot');
           console.error('Fetch error:', err);
         } finally {
@@ -257,17 +263,20 @@
           }
 
           // Initial greeting and fetch locations
-          appendMessage('bot', 'Hello! Preparing the chat for you...');
+          // Corrected appendMessage call
+          appendMessage('Hello! Preparing the chat for you...', 'bot');
 
           availableLocations = await fetchLocations(currentRestaurantId);
 
           if (availableLocations.length === 0) {
-              appendMessage('bot', 'Unfortunately, no branches are currently available for chat at this restaurant. Please try again later.');
+              // Corrected appendMessage call
+              appendMessage('Unfortunately, no branches are currently available for chat at this restaurant. Please try again later.', 'bot');
               disableInput(); // Disable input if no locations
           } else if (availableLocations.length === 1) {
               selectedLocationId = availableLocations[0].location_id;
-              appendMessage('bot', `You are chatting with the **${availableLocations[0].location_name}** branch.`);
-              appendMessage('bot', 'How can I assist you today?');
+              // Corrected appendMessage calls
+              appendMessage(`You are chatting with the **${availableLocations[0].location_name}** branch.`, 'bot');
+              appendMessage('How can I assist you today?', 'bot');
               enableInput(); // Enable input now that location is set
           } else {
               // Multiple locations, prompt the user to choose
@@ -275,7 +284,8 @@
               availableLocations.forEach((loc, index) => {
                   locationPrompt += `${index + 1}. ${loc.location_name}\n`;
               });
-              appendMessage('bot', locationPrompt);
+              // Corrected appendMessage call
+              appendMessage(locationPrompt, 'bot');
               enableInput(); // Enable input to allow user to type branch name
           }
       });
