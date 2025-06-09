@@ -18,7 +18,7 @@
       border-radius: 15px;
       max-width: 70%;
       word-wrap: break-word;
-      white-space: pre-wrap; /* <--- ADDED THIS LINE */
+      white-space: pre-wrap; /* Ensures line breaks in messages are respected */
     }
     footer { padding: 10px 20px; background: #fff; border-top: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
     input[type="text"] { flex: 1; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
@@ -30,8 +30,7 @@
 <body>
 
   <header id="header">Restaurant Chat</header>
-  <main id="chatWindow">
-    </main>
+  <main id="chatWindow"></main>
   <footer>
     <input type="text" id="chatInput" placeholder="Type your message…" autocomplete="off" />
     <button id="sendButton" disabled>Send</button>
@@ -39,7 +38,25 @@
 
   <script>
     (function() {
-      // Function to generate a UUID (Unique User Session ID)
+      // --- Global Variables ---
+      let userSessionId = ''; // Will store the unique session ID
+      let currentRestaurantId = ''; // From URL params (e.g., R001)
+      let selectedLocationId = ''; // The ID of the branch the user chooses (e.g., L001-R001)
+      let availableLocations = []; // Array of { location_id, location_name } objects
+
+      // --- N8N Webhook URLs ---
+      // IMPORTANT: REPLACE 'YOUR_WORKFLOW3_WEBHOOK_ID' with the actual ID from your N8N Workflow 3 Webhook
+      const N8N_WORKFLOW3_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/YOUR_WORKFLOW3_WEBHOOK_ID/get-locations/';
+      const N8N_WORKFLOW2_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/'; // Your existing Workflow 2 URL
+
+
+      // --- DOM Elements ---
+      const headerEl = document.getElementById('header');
+      const chatWindow = document.getElementById('chatWindow');
+      const chatInput = document.getElementById('chatInput');
+      const sendButton = document.getElementById('sendButton');
+
+      // --- Utility Functions ---
       function generateUUID() {
           return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
               var r = Math.random() * 16 | 0,
@@ -48,81 +65,120 @@
           });
       }
 
-      // Get or create a unique user session ID and store it in localStorage
-      let userSessionId = localStorage.getItem('userSessionId');
-      if (!userSessionId) {
-          userSessionId = generateUUID();
-          localStorage.setItem('userSessionId', userSessionId);
-      }
-      console.log("Current User Session ID:", userSessionId); // For debugging purposes
-
-      // 1) Extract restaurant_id and restaurant_name from query string
       function getQueryParams() {
         const params = new URLSearchParams(window.location.search);
         return {
-          id: params.get('restaurant_id'),
-          name: params.get('restaurant_name')
+          restaurant_id: params.get('restaurant_id'),
+          restaurant_name: params.get('restaurant_name')
         };
       }
 
-      const { id: restaurantId, name: restaurantName } = getQueryParams(); // Correctly gets from query params
-
-      const headerEl = document.getElementById('header');
-      const chatWindow = document.getElementById('chatWindow');
-      const chatInput = document.getElementById('chatInput');
-      const sendButton = document.getElementById('sendButton');
-
-      // 2) If no restaurant_id, show a warning and disable input
-      if (!restaurantId) {
-        headerEl.textContent = 'Error: No restaurant_id provided';
-        const warn = document.createElement('div');
-        warn.className = 'notification';
-        warn.textContent = 'This chat page requires ?restaurant_id=R001 (or similar) in the URL.';
-        chatWindow.appendChild(warn);
-        return;
-      }
-
-      // 3) Update header to show which restaurant the user is chatting with
-      if (restaurantName) {
-        headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`;
-      } else {
-        headerEl.textContent = `Chatting with Restaurant ${restaurantId}`;
-      }
-
-      // 4) Enable send button when user types
-      chatInput.addEventListener('input', () => {
-        sendButton.disabled = chatInput.value.trim().length === 0;
-      });
-
-      // 5) Helper to append a message bubble
       function appendMessage(text, sender) {
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ' + sender;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text; // This will now respect \n due to white-space: pre-wrap;
+        bubble.textContent = text;
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
       }
 
-      // 6) On first load, show a greeting
-      appendMessage('Hello! How can I help you today?', 'bot');
+      function enableInput() {
+          chatInput.disabled = false;
+          sendButton.disabled = chatInput.value.trim().length === 0; // Re-check if input has text
+          chatInput.focus();
+      }
 
-      // 7) Handle send button click
-      sendButton.addEventListener('click', async () => {
+      function disableInput() {
+          chatInput.disabled = true;
+          sendButton.disabled = true;
+      }
+
+      // --- New: Fetch Locations from Workflow 3 ---
+      async function fetchLocations(restaurantId) {
+          disableInput(); // Disable input while fetching
+          appendMessage('bot', 'Fetching available branches...');
+          const url = `${N8N_WORKFLOW3_BASE_URL}${encodeURIComponent(restaurantId)}`;
+          try {
+              const response = await fetch(url);
+              if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              const data = await response.json();
+              // Assuming Workflow 3 returns an array of objects like:
+              // [{ location_id: "L001-R001", location_name: "Zaarourieh Branch" }, ...]
+              return data;
+          } catch (error) {
+              console.error('Error fetching locations:', error);
+              appendMessage('bot', 'Failed to load branches. Please try refreshing the page or check the restaurant ID.');
+              return [];
+          } finally {
+              // We'll re-enable input after handling location choice
+          }
+      }
+
+      // --- New: Handle Location Selection ---
+      async function handleLocationSelection(userText) {
+          // Try to find a matching location name
+          let matchedLocation = null;
+          for (const loc of availableLocations) {
+              if (userText.toLowerCase().includes(loc.location_name.toLowerCase())) {
+                  matchedLocation = loc;
+                  break;
+              }
+          }
+
+          if (matchedLocation) {
+              selectedLocationId = matchedLocation.location_id;
+              appendMessage('bot', `Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`);
+              enableInput(); // Enable input for general chat
+              return true; // Location selected successfully
+          } else {
+              // No match, re-prompt the user
+              let promptMessage = 'Please select a branch by typing its name or number:\n';
+              availableLocations.forEach((loc, index) => {
+                  promptMessage += `${index + 1}. ${loc.location_name}\n`;
+              });
+              appendMessage('bot', promptMessage);
+              enableInput(); // Keep input enabled for re-selection
+              return false; // Location not yet selected
+          }
+      }
+
+      // --- Main Send Message Function ---
+      sendButton.addEventListener('click', sendMessage);
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !sendButton.disabled) {
+          sendMessage();
+        }
+      });
+
+      async function sendMessage() {
         const userText = chatInput.value.trim();
         if (!userText) return;
 
         appendMessage(userText, 'user');
         chatInput.value = '';
-        sendButton.disabled = true;
+        disableInput(); // Disable input while processing
 
-        // 8) Call the n8n Webhook:
-        // Use the n8n webhook URL from Workflow 1 (Trigger URL).
-        // restaurantId is still in the URL path, but userSessionId is in the body.
-        const n8nBaseWebhookUrl = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b'; 
-        const webhookUrl = `${n8nBaseWebhookUrl}/chat/${encodeURIComponent(restaurantId)}`; // Only restaurantId in path
+        // --- Logic for Location Selection (if not already selected) ---
+        if (!selectedLocationId) {
+            const locationChosen = await handleLocationSelection(userText);
+            if (!locationChosen) {
+                // If location not chosen, do not proceed with sending to N8N
+                return;
+            }
+            // If location was just chosen, the current message was for selection.
+            // Wait for the next user message for actual chat.
+            // Alternatively, you could resend the original userText with the newly selected locationId
+            // but for simplicity, let's wait for next message.
+            enableInput();
+            return;
+        }
+
+        // --- Proceed with sending message to Workflow 2 (Chat Interaction) ---
+        const webhookUrl = `${N8N_WORKFLOW2_BASE_URL}${encodeURIComponent(currentRestaurantId)}`;
 
         try {
           const typingNode = document.createElement('div');
@@ -137,14 +193,15 @@
             headers: {
               'Content-Type': 'application/json'
             },
-            // --- IMPORTANT CHANGE HERE: userSessionId included in the JSON body ---
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: userText,
-                userSessionId: userSessionId // Sending userSessionId in the body
+                userSessionId: userSessionId,
+                location_id: selectedLocationId // THIS IS THE NEW CRITICAL PIECE!
             })
           });
 
-          document.getElementById('typingIndicator').remove();
+          const indicator = document.getElementById('typingIndicator');
+          if (indicator) indicator.remove(); // Remove typing indicator
 
           if (!response.ok) {
             throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
@@ -157,14 +214,64 @@
 
           appendMessage('❌ Error contacting the server. Please try again.', 'bot');
           console.error('Fetch error:', err);
+        } finally {
+            enableInput(); // Re-enable input after bot responds or error occurs
         }
-      });
+      }
 
-      // Allow Enter key to send
-      chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !sendButton.disabled) {
-          sendButton.click();
-        }
+      // --- Initialization on Page Load ---
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Get or create a unique user session ID
+          userSessionId = localStorage.getItem('userSessionId');
+          if (!userSessionId) {
+              userSessionId = generateUUID();
+              localStorage.setItem('userSessionId', userSessionId);
+          }
+          console.log("Current User Session ID:", userSessionId);
+
+          const queryParams = getQueryParams();
+          currentRestaurantId = queryParams.restaurant_id || '';
+          const restaurantName = queryParams.restaurant_name || 'Restaurant';
+
+          // Set header text
+          if (restaurantName) {
+            headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`;
+          } else {
+            headerEl.textContent = `Chatting with Restaurant ${currentRestaurantId || 'Unknown'}`;
+          }
+
+          if (!currentRestaurantId) {
+            headerEl.textContent = 'Error: Missing Restaurant ID';
+            const warn = document.createElement('div');
+            warn.className = 'notification';
+            warn.textContent = 'This chat page requires a ?restaurant_id=... parameter in the URL.';
+            chatWindow.appendChild(warn);
+            disableInput(); // Ensure input is disabled if no restaurant ID
+            return;
+          }
+
+          // Initial greeting and fetch locations
+          appendMessage('bot', 'Hello! Preparing the chat for you...');
+
+          availableLocations = await fetchLocations(currentRestaurantId);
+
+          if (availableLocations.length === 0) {
+              appendMessage('bot', 'Unfortunately, no branches are currently available for chat at this restaurant. Please try again later.');
+              disableInput(); // Disable input if no locations
+          } else if (availableLocations.length === 1) {
+              selectedLocationId = availableLocations[0].location_id;
+              appendMessage('bot', `You are chatting with the **${availableLocations[0].location_name}** branch.`);
+              appendMessage('bot', 'How can I assist you today?');
+              enableInput(); // Enable input now that location is set
+          } else {
+              // Multiple locations, prompt the user to choose
+              let locationPrompt = 'Welcome! Which branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
+              availableLocations.forEach((loc, index) => {
+                  locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+              });
+              appendMessage('bot', locationPrompt);
+              enableInput(); // Enable input to allow user to type branch name
+          }
       });
     })();
   </script>
