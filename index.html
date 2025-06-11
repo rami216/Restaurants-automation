@@ -45,9 +45,9 @@
       let availableLocations = []; // Array of { location_id, location_name } objects
 
       // --- N8N Webhook URLs ---
-      // IMPORTANT: These URLs should match your n8n workflows
-      const N8N_WORKFLOW3_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/';
-      const N8N_WORKFLOW2_BASE_URL = 'https://rami215.app.n8n.cloud/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/'; // Your existing Workflow 2 URL
+      // IMPORTANT: These URLs now point to your self-hosted n8n instance on DigitalOcean
+      const N8N_WORKFLOW3_BASE_URL = 'https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/';
+      const N8N_WORKFLOW2_BASE_URL = 'https://n8n.ramiai.xyz/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/';
 
 
       // --- DOM Elements ---
@@ -102,6 +102,7 @@
           disableInput(); // Disable input while fetching
           // Corrected appendMessage call
           appendMessage('Fetching available branches...', 'bot');
+          // Ensure the restaurantId is appended to the base URL
           const url = `${N8N_WORKFLOW3_BASE_URL}${encodeURIComponent(restaurantId)}`;
           try {
               const response = await fetch(url);
@@ -213,6 +214,7 @@
         }
 
         // --- Proceed with sending message to Workflow 2 (Chat Interaction) ---
+        // Ensure the restaurantId is appended to the base URL
         const webhookUrl = `${N8N_WORKFLOW2_BASE_URL}${encodeURIComponent(currentRestaurantId)}`;
 
         try {
