@@ -40,13 +40,13 @@
     (function() {
       // --- Global Variables ---
       let userSessionId = ''; // Will store the unique session ID
-      let currentRestaurantId = ''; // From URL params (e.g., R001)
+      let currentRestaurantId = '';
       let selectedLocationId = ''; // The ID of the branch the user chooses (e.g., L001-R001)
-      let availableLocations = []; // Array of { location_id, location_name } objects
+      let availableLocations = []; // Array of { location_id, location_name, end_date } objects (all fetched, active or not)
 
       // --- N8N Webhook URLs ---
       // IMPORTANT: These URLs now point to your self-hosted n8n instance on DigitalOcean
-      const N8N_WORKFLOW3_BASE_URL = 'https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/';
+      const N8N_WORKFLOW3_BASE_URL = 'https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/'; // This workflow must now return 'end_date' for each location
       const N8N_WORKFLOW2_BASE_URL = 'https://n8n.ramiai.xyz/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/';
 
 
@@ -73,14 +73,13 @@
         };
       }
 
-      // Corrected appendMessage function
       function appendMessage(text, sender) {
-        console.log(`Appending message: [${sender}] "${text}"`); // Diagnostic: Check what text is being appended
+        console.log(`Appending message: [${sender}] "${text}"`);
         const msgDiv = document.createElement('div');
-        msgDiv.className = 'message ' + sender; // Correctly sets 'message bot' or 'message user'
+        msgDiv.className = 'message ' + sender;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text; // Correctly sets the actual message text
+        bubble.textContent = text;
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -88,7 +87,7 @@
 
       function enableInput() {
           chatInput.disabled = false;
-          sendButton.disabled = chatInput.value.trim().length === 0; // Re-check if input has text
+          sendButton.disabled = chatInput.value.trim().length === 0;
           chatInput.focus();
       }
 
@@ -97,12 +96,10 @@
           sendButton.disabled = true;
       }
 
-      // --- New: Fetch Locations from Workflow 3 ---
+      // --- Fetch Locations from Workflow 3 (now explicitly expects end_date) ---
       async function fetchLocations(restaurantId) {
-          disableInput(); // Disable input while fetching
-          // Corrected appendMessage call
+          disableInput();
           appendMessage('Fetching available branches...', 'bot');
-          // Ensure the restaurantId is appended to the base URL
           const url = `${N8N_WORKFLOW3_BASE_URL}${encodeURIComponent(restaurantId)}`;
           try {
               const response = await fetch(url);
@@ -110,29 +107,28 @@
                   throw new Error(`HTTP error! status: ${response.status}`);
               }
               const data = await response.json();
-              // Assuming Workflow 3 returns an array of objects like:
-              // [{ location_id: "L001-R001", location_name: "Zaarourieh Branch" }, ...]
+              // Assuming Workflow 3 now returns an array of objects like:
+              // [{ location_id: "L001-R001", location_name: "Zaarourieh Branch", end_date: "2025-12-31T23:59:59.000Z" }, ...]
               return data;
           } catch (error) {
               console.error('Error fetching locations:', error);
-              // Corrected appendMessage call
               appendMessage('Failed to load branches. Please try refreshing the page or check the restaurant ID.', 'bot');
               return [];
           } finally {
-              // We'll re-enable input after handling location choice
+              // Input will be re-enabled after subscription check in DOMContentLoaded
           }
       }
 
-      // --- New: Handle Location Selection ---
+      // --- Handle Location Selection (now includes subscription check on selection) ---
       async function handleLocationSelection(userText) {
-          // Try to find a matching location name
           let matchedLocation = null;
-          // Check for numerical input first
           const numInput = parseInt(userText);
+
+          // Attempt to match by number first, referring to the full availableLocations list
           if (!isNaN(numInput) && numInput > 0 && numInput <= availableLocations.length) {
               matchedLocation = availableLocations[numInput - 1];
           } else {
-              // Then check for name match (case-insensitive)
+              // Then attempt to match by name (case-insensitive)
               for (const loc of availableLocations) {
                   if (userText.toLowerCase().includes(loc.location_name.toLowerCase())) {
                       matchedLocation = loc;
@@ -141,22 +137,53 @@
               }
           }
 
-
           if (matchedLocation) {
-              selectedLocationId = matchedLocation.location_id;
-              // Corrected appendMessage call
-              appendMessage(`Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`, 'bot');
-              enableInput(); // Enable input for general chat
-              return true; // Location selected successfully
+              const endDate = new Date(matchedLocation.end_date);
+              const now = new Date();
+
+              if (endDate > now) { // Check if subscription is active for the selected branch
+                  selectedLocationId = matchedLocation.location_id;
+                  appendMessage(`Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`, 'bot');
+                  enableInput(); // Enable input for general chat
+                  return true; // Location selected successfully and is active
+              } else {
+                  // Selected location's subscription is expired
+                  appendMessage(`Sorry, the subscription for the **${matchedLocation.location_name}** branch has expired. This chat is currently unavailable for this branch.`, 'bot');
+
+                  // Filter for genuinely active locations to re-prompt the user
+                  const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > now);
+
+                  if (activeLocationsForPrompt.length === 0) {
+                      appendMessage('Unfortunately, all branches for this restaurant currently have expired subscriptions. This chat is unavailable.', 'bot');
+                      disableInput(); // Disable input if no active branches left
+                  } else {
+                      let promptMessage = 'Please select another active branch by typing its **name** or **number** from the list:\n';
+                      activeLocationsForPrompt.forEach((loc) => {
+                          // Use original index from the full availableLocations for consistent numbering in the prompt
+                          promptMessage += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
+                      });
+                      appendMessage(promptMessage, 'bot');
+                      enableInput(); // Keep input enabled for re-selection
+                  }
+                  return false; // Location not yet selected (or selected but inactive)
+              }
           } else {
-              // No match, re-prompt the user
+              // No match found for user's input
               let promptMessage = 'Sorry, I don\'t recognize that branch. Please select a branch by typing its **name** or **number** from the list:\n';
-              availableLocations.forEach((loc, index) => {
-                  promptMessage += `${index + 1}. ${loc.location_name}\n`;
-              });
-              // Corrected appendMessage call
+              
+              // Filter for active locations to list in the re-prompt
+              const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > new Date());
+              
+              if (activeLocationsForPrompt.length === 0) {
+                  promptMessage = 'Unfortunately, all branches for this restaurant currently have expired subscriptions. This chat is unavailable.';
+                  disableInput();
+              } else {
+                  activeLocationsForPrompt.forEach((loc) => {
+                      promptMessage += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
+                  });
+                  enableInput();
+              }
               appendMessage(promptMessage, 'bot');
-              enableInput(); // Keep input enabled for re-selection
               return false; // Location not yet selected
           }
       }
@@ -169,7 +196,6 @@
         }
       });
 
-      // NEW: Event listener to dynamically enable/disable send button
       chatInput.addEventListener('input', () => {
           sendButton.disabled = chatInput.value.trim().length === 0;
       });
@@ -183,38 +209,47 @@
         chatInput.value = '';
         disableInput(); // Disable input while processing
 
-        // NEW LOGIC: Check for "change branch" command BEFORE checking selectedLocationId
+        // NEW LOGIC: Check for "change branch" command
         if (userText.toLowerCase() === 'change branch' || userText.toLowerCase() === 'switch branch' || userText.toLowerCase() === 'new branch') {
             selectedLocationId = ''; // Reset the selected location
-            // Corrected appendMessage call
             appendMessage('Okay, resetting the selected branch. Please choose a new branch:', 'bot');
 
-            // Re-initiate the location prompt using the same logic as DCL
             const queryParams = getQueryParams();
             const restaurantName = queryParams.restaurant_name || 'Restaurant';
 
-            let locationPrompt = 'Welcome! Which branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
-            availableLocations.forEach((loc, index) => {
-                locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+            // Filter for only active locations for the prompt
+            const now = new Date();
+            const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > now);
+
+            if (activeLocationsForPrompt.length === 0) {
+                appendMessage('Unfortunately, there are no active branches available for chat at this restaurant. This chat is unavailable.', 'bot');
+                disableInput();
+                return; // Stop further processing
+            }
+
+            let locationPrompt = 'Which active branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
+            activeLocationsForPrompt.forEach((loc) => {
+                // Use original index from availableLocations for display consistency
+                locationPrompt += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
             });
-            // Corrected appendMessage call
             appendMessage(locationPrompt, 'bot');
             enableInput();
             return; // Stop further processing for this message
         }
 
         // --- Original Logic for Location Selection (if not already selected) ---
+        // This will now handle the subscription check during selection
         if (!selectedLocationId) {
             const locationChosen = await handleLocationSelection(userText);
             if (!locationChosen) {
-                return;
+                return; // Stop if location not chosen or inactive
             }
+            // If location was successfully chosen and is active, re-enable input and proceed
             enableInput();
             return;
         }
 
         // --- Proceed with sending message to Workflow 2 (Chat Interaction) ---
-        // Ensure the restaurantId is appended to the base URL
         const webhookUrl = `${N8N_WORKFLOW2_BASE_URL}${encodeURIComponent(currentRestaurantId)}`;
 
         try {
@@ -244,13 +279,11 @@
             throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
           }
           const data = await response.json();
-          // Corrected appendMessage call
           appendMessage(data.response, 'bot'); // Assuming Workflow 2 returns { response: "bot's message" }
         } catch (err) {
           const indicator = document.getElementById('typingIndicator');
           if (indicator) indicator.remove();
 
-          // Corrected appendMessage call
           appendMessage('❌ Error contacting the server. Please try again.', 'bot');
           console.error('Fetch error:', err);
         } finally {
@@ -289,29 +322,33 @@
             return;
           }
 
-          // Initial greeting and fetch locations
-          // Corrected appendMessage call
           appendMessage('Hello! Preparing the chat for you...', 'bot');
 
-          availableLocations = await fetchLocations(currentRestaurantId);
+          // Fetch ALL locations first, including those that might be expired
+          const fetchedAllLocations = await fetchLocations(currentRestaurantId);
+          // Store all locations (for 'change branch' to refer to original numbering)
+          availableLocations = fetchedAllLocations; // This now includes end_date
 
-          if (availableLocations.length === 0) {
-              // Corrected appendMessage call
-              appendMessage('Unfortunately, no branches are currently available for chat at this restaurant. Please try again later.', 'bot');
-              disableInput(); // Disable input if no locations
-          } else if (availableLocations.length === 1) {
-              selectedLocationId = availableLocations[0].location_id;
-              // Corrected appendMessage calls
-              appendMessage(`You are chatting with the **${availableLocations[0].location_name}** branch.`, 'bot');
+          // Now filter for actively subscribed locations
+          const now = new Date();
+          const activeLocations = fetchedAllLocations.filter(loc => new Date(loc.end_date) > now);
+
+          if (activeLocations.length === 0) {
+              appendMessage('Unfortunately, no active branches are currently available for chat at this restaurant. This chat is unavailable.', 'bot');
+              disableInput(); // Disable input if no active locations
+          } else if (activeLocations.length === 1) {
+              // If only one active location, select it automatically
+              selectedLocationId = activeLocations[0].location_id;
+              appendMessage(`You are chatting with the **${activeLocations[0].location_name}** branch.`, 'bot');
               appendMessage('How can I assist you today?', 'bot');
               enableInput(); // Enable input now that location is set
           } else {
-              // Multiple locations, prompt the user to choose
-              let locationPrompt = 'Welcome! Which branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
-              availableLocations.forEach((loc, index) => {
-                  locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+              // Multiple active locations, prompt the user to choose
+              let locationPrompt = 'Welcome! Which active branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
+              activeLocations.forEach((loc) => {
+                  // Use original index from fetchedAllLocations for display consistency
+                  locationPrompt += `${fetchedAllLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
               });
-              // Corrected appendMessage call
               appendMessage(locationPrompt, 'bot');
               enableInput(); // Enable input to allow user to type branch name
           }
