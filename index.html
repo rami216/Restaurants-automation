@@ -189,14 +189,23 @@
       }
 
       function appendMessage(text, sender) {
+        // console.log(`Appending message: [${sender}] "${text}"`); // Diagnostic: You can keep or remove this line
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ' + sender;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text;
+
+        // --- NEW CODE HERE: Process bold markdown for bot messages ---
+        let processedText = text;
+        if (sender === 'bot') {
+            // Replace **text** with <strong>text</strong> for bold formatting
+            processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+        bubble.innerHTML = processedText; // Use innerHTML to render bold tags
+        // --- END NEW CODE ---
+
         msgDiv.appendChild(bubble);
         chatWindow.appendChild(msgDiv);
-        // Ensure scrolling to the bottom after appending a message
         chatWindow.scrollTop = chatWindow.scrollHeight;
       }
 
