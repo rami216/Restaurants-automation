@@ -42,7 +42,7 @@
       padding: 20px;
       display: flex;
       flex-direction: column;
-      justify-content: flex-end; /* Keeps messages at the bottom */
+      justify-content: flex-start;
       gap: 10px; /* Space between messages */
     }
 
@@ -189,25 +189,36 @@
       }
 
       function appendMessage(text, sender) {
-        // console.log(`Appending message: [${sender}] "${text}"`); // Diagnostic: You can keep or remove this line
+        // Create message wrapper
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message ' + sender;
+      
+        // Create bubble
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-
-        // --- NEW CODE HERE: Process bold markdown for bot messages ---
+      
+        // Process **bold** for bot messages
         let processedText = text;
         if (sender === 'bot') {
-            // Replace **text** with <strong>text</strong> for bold formatting
-            processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+          processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         }
-        bubble.innerHTML = processedText; // Use innerHTML to render bold tags
-        // --- END NEW CODE ---
-
+        bubble.innerHTML = processedText;
+      
         msgDiv.appendChild(bubble);
+      
+        // Check if user is already scrolled to bottom (within 5px tolerance)
+        const atBottom =
+          chatWindow.scrollHeight - chatWindow.clientHeight - chatWindow.scrollTop < 5;
+      
+        // Append new message
         chatWindow.appendChild(msgDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+      
+        // Only auto‐scroll when we were already at bottom
+        if (atBottom) {
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
       }
+      
 
       function enableInput() {
           chatInput.disabled = false;
