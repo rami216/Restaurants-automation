@@ -398,6 +398,21 @@
           }
           const data = await response.json();
           appendMessage(data.response, 'bot'); 
+          // --- START OF NEW LOGIC ---
+          const botMessageContent = data.response; // Get the bot's response text
+          const confirmationEnglish = "Your order is confirmed!";
+          const confirmationArabic = "طلبك مؤكد!";
+
+          if (botMessageContent.includes(confirmationEnglish) || botMessageContent.includes(confirmationArabic)) {
+              localStorage.removeItem('userSessionId');
+              disableInput(); 
+              console.log('Order confirmed! userSessionId cleared from localStorage.');
+              // Optional: You might want to provide more immediate visual feedback
+              // For example, disable the input and show a "Start New Order" button
+              // or a "Thank You" message and then a "New Chat" button.
+              // For now, it will just clear the session in the background.
+          }
+          // --- END OF NEW LOGIC ---
         } catch (err) {
           const indicator = document.getElementById('typingIndicator');
           if (indicator) indicator.remove();
