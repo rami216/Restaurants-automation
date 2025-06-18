@@ -165,6 +165,9 @@
       const N8N_WORKFLOW3_BASE_URL = 'https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/'; 
       const N8N_WORKFLOW2_BASE_URL = 'https://n8n.ramiai.xyz/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/';
 
+      // -- gemeini chat-interaction webhook url:
+      const N8N_WORKFLOW2_BASE_URL_GEMINI='https://n8n.ramiai.xyz/webhook/51103be6-f515-4907-bb2d-5c4575b4cfce/chat/';
+
       // --- DOM Elements ---
       const headerEl = document.getElementById('header');
       const chatWindow = document.getElementById('chatWindow');
@@ -365,7 +368,7 @@
             return;
         }
 
-        const webhookUrl = `${N8N_WORKFLOW2_BASE_URL}${encodeURIComponent(currentRestaurantId)}`;
+        const webhookUrl = `${N8N_WORKFLOW2_BASE_URL_GEMINI}${encodeURIComponent(currentRestaurantId)}`;
 
         try {
           const typingNode = document.createElement('div');
