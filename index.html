@@ -1,484 +1,476 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Restaurant Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    /* Global Reset */
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Restaurant Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      /* Global Reset */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-    /* Base Layout for Full Viewport Height on Mobile */
-    html, body {
-      height: 100%; /* Use 100% for better mobile keyboard behavior */
-      min-height: 100vh; /* Fallback/ensure it stretches initially */
-      font-family: 'Inter', Arial, sans-serif; /* Using Inter font as per guidelines */
-      background: #f5f5f5;
-      display: flex;
-      flex-direction: column; /* Stack header, main, footer vertically */
-    }
+      /* Base Layout for Full Viewport Height on Mobile */
+      html,
+      body {
+        height: 100%;
+        min-height: 100vh;
+        font-family: "Inter", Arial, sans-serif;
+        background: #f5f5f5;
+        display: flex;
+        flex-direction: column;
+      }
 
-    /* Header Styling */
-    header {
-      background: #2c3e50;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 1.25rem;
-      border-bottom-left-radius: 8px; /* Rounded corners */
-      border-bottom-right-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      flex-shrink: 0; /* Prevents header from shrinking */
-    }
+      /* Header Styling */
+      header {
+        background: #2c3e50;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-size: 1.25rem;
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+      }
 
-    /* Main Chat Window Area */
-    main {
-      flex: 1; /* Allows main content to grow and shrink */
-      overflow-y: auto; /* Enables vertical scrolling within this section */
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      gap: 10px; /* Space between messages */
-    }
+      /* Main Chat Window Area */
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 10px;
+      }
 
-    /* Message Bubbles */
-    .message { 
-      margin-bottom: 10px; 
-      display: flex; 
-    }
-    .message.user {
-      justify-content: flex-end; /* User messages float right */
-    }
-    .message.bot {
-      justify-content: flex-start; /* Bot messages float left */
-    }
-    .message.user .bubble { 
-      background: #3498db; 
-      color: white; 
-      margin-left: auto; /* Pushes user bubble to the right */
-      border-top-right-radius: 5px; /* Adjust radius for message bubbles */
-      border-bottom-right-radius: 15px;
-      border-top-left-radius: 15px;
-      border-bottom-left-radius: 15px;
-    }
-    .message.bot .bubble { 
-      background: #ecf0f1; 
-      color: #2c3e50; 
-      margin-right: auto; /* Pushes bot bubble to the left */
-      border-top-left-radius: 5px; /* Adjust radius for message bubbles */
-      border-bottom-left-radius: 15px;
-      border-top-right-radius: 15px;
-      border-bottom-right-radius: 15px;
-    }
-    .bubble {
-      padding: 10px 15px;
-      max-width: 70%;
-      word-wrap: break-word;
-      white-space: pre-wrap; /* Ensures line breaks in messages are respected */
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08); /* Subtle shadow for bubbles */
-    }
+      /* Message Bubbles */
+      .message {
+        margin-bottom: 10px;
+        display: flex;
+      }
+      .message.user {
+        justify-content: flex-end;
+      }
+      .message.bot {
+        justify-content: flex-start;
+      }
+      .message.user .bubble {
+        background: #3498db;
+        color: white;
+        margin-left: auto;
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 15px;
+        border-top-left-radius: 15px;
+        border-bottom-left-radius: 15px;
+      }
+      .message.bot .bubble {
+        background: #ecf0f1;
+        color: #2c3e50;
+        margin-right: auto;
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 15px;
+        border-top-right-radius: 15px;
+        border-bottom-right-radius: 15px;
+      }
+      .bubble {
+        padding: 10px 15px;
+        max-width: 70%;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
 
-    /* Footer (Input Area) Styling */
-    footer { 
-      padding: 10px 20px; 
-      background: #fff; 
-      border-top: 1px solid #ddd; 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      flex-shrink: 0; /* Prevents footer from shrinking */
-      border-top-left-radius: 8px; /* Rounded corners */
-      border-top-right-radius: 8px;
-      box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
-    }
-    input[type="text"] { 
-      flex: 1; /* Input takes most of the space */
-      padding: 10px; 
-      font-size: 1rem; 
-      border: 1px solid #ccc; 
-      border-radius: 8px; /* More rounded input */
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-      outline: none; /* Remove default focus outline */
-    }
-    input[type="text"]:focus {
-      border-color: #3498db; /* Highlight on focus */
-      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-    }
-    button { 
-      padding: 10px 15px; 
-      font-size: 1rem; 
-      background: #2ecc71; 
-      border: none; 
-      border-radius: 8px; /* More rounded button */
-      color: white; 
-      cursor: pointer; 
-      transition: background 0.2s ease, transform 0.1s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    button:hover:not(:disabled) {
-      background: #27ae60;
-    }
-    button:active:not(:disabled) {
-      transform: translateY(1px); /* Slight press effect */
-    }
-    button:disabled { 
-      background: #95a5a6; 
-      cursor: not-allowed; 
-      box-shadow: none;
-    }
+      /* Footer (Input Area) Styling */
+      footer {
+        padding: 10px 20px;
+        background: #fff;
+        border-top: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        outline: none;
+      }
+      input[type="text"]:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      }
+      button {
+        padding: 10px 15px;
+        font-size: 1rem;
+        background: #2ecc71;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.1s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      button:hover:not(:disabled) {
+        background: #27ae60;
+      }
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        background: #95a5a6;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
 
-    /* Notification Bar */
-    .notification { 
-      text-align: center; 
-      padding: 10px; 
-      background: #f1c40f; 
-      color: #2c3e50; 
-      font-weight: bold; 
-      border-radius: 8px; /* Rounded corners */
-      margin-bottom: 10px;
-    }
-  </style>
-</head>
-<body>
+      /* Notification Bar */
+      .notification {
+        text-align: center;
+        padding: 10px;
+        background: #f1c40f;
+        color: #2c3e50;
+        font-weight: bold;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header id="header">Restaurant Chat</header>
+    <main id="chatWindow"></main>
+    <footer>
+      <input
+        type="text"
+        id="chatInput"
+        placeholder="Type your message…"
+        autocomplete="off"
+      />
+      <button id="sendButton" disabled>Send</button>
+    </footer>
 
-  <header id="header">Restaurant Chat</header>
-  <main id="chatWindow"></main>
-  <footer>
-    <input type="text" id="chatInput" placeholder="Type your message…" autocomplete="off" />
-    <button id="sendButton" disabled>Send</button>
-  </footer>
+    <script>
+      (function () {
+        // --- Global Variables ---
+        let userSessionId = "";
+        let currentRestaurantId = "";
+        let selectedLocationId = "";
+        let availableLocations = [];
 
-  <script>
-    (function() {
-      // --- Global Variables ---
-      let userSessionId = ''; 
-      let currentRestaurantId = '';
-      let selectedLocationId = ''; 
-      let availableLocations = []; 
+        // --- N8N Webhook URLs ---
+        const N8N_CHECK_AVAILABILITY_URL =
+          "https://n8n.ramiai.xyz/webhook/check-availability";
+        const N8N_GET_LOCATIONS_URL =
+          "https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/";
+        const N8N_CHAT_URL =
+          "https://n8n.ramiai.xyz/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/";
 
-      // --- N8N Webhook URLs ---
-      const N8N_WORKFLOW3_BASE_URL = 'https://n8n.ramiai.xyz/webhook/a4880b47-a33d-40d7-b8d5-7590a485c8bc/get-locations/'; 
-      const N8N_WORKFLOW2_BASE_URL = 'https://n8n.ramiai.xyz/webhook/1b80b05d-0a0b-4e4c-8d6f-970330f6587b/chat/';
+        // --- DOM Elements ---
+        const headerEl = document.getElementById("header");
+        const chatWindow = document.getElementById("chatWindow");
+        const chatInput = document.getElementById("chatInput");
+        const sendButton = document.getElementById("sendButton");
 
-      // -- gemeini chat-interaction webhook url:
-      //const N8N_WORKFLOW2_BASE_URL_GEMINI='https://n8n.ramiai.xyz/webhook/51103be6-f515-4907-bb2d-5c4575b4cfce/chat/';
-     
-      // --- DOM Elements ---
-      const headerEl = document.getElementById('header');
-      const chatWindow = document.getElementById('chatWindow');
-      const chatInput = document.getElementById('chatInput');
-      const sendButton = document.getElementById('sendButton');
-
-      // --- Utility Functions ---
-      function generateUUID() {
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-              var r = Math.random() * 16 | 0,
-                  v = c == 'x' ? r : (r & 0x3 | 0x8);
+        // --- Utility Functions ---
+        function generateUUID() {
+          return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+            /[xy]/g,
+            function (c) {
+              var r = (Math.random() * 16) | 0,
+                v = c == "x" ? r : (r & 0x3) | 0x8;
               return v.toString(16);
-          });
-      }
-
-      function getQueryParams() {
-        const params = new URLSearchParams(window.location.search);
-        return {
-          restaurant_id: params.get('restaurant_id'),
-          restaurant_name: params.get('restaurant_name')
-        };
-      }
-
-      function appendMessage(text, sender) {
-        // Create message wrapper
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message ' + sender;
-      
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-      
-        // Process **bold** for bot messages
-        let processedText = text;
-        if (sender === 'bot') {
-          processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            }
+          );
         }
-        bubble.innerHTML = processedText;
-      
-        msgDiv.appendChild(bubble);
-      
-        // Check if user is already scrolled to bottom (within 5px tolerance)
-        const atBottom =
-          chatWindow.scrollHeight - chatWindow.clientHeight - chatWindow.scrollTop < 5;
-      
-        // Append new message
-        chatWindow.appendChild(msgDiv);
-      
-        // Only auto‐scroll when we were already at bottom
-        if (atBottom) {
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-        }
-      }
-      
 
-      function enableInput() {
+        function getQueryParams() {
+          const params = new URLSearchParams(window.location.search);
+          return {
+            restaurant_id: params.get("restaurant_id"),
+            restaurant_name: params.get("restaurant_name"),
+          };
+        }
+
+        function appendMessage(text, sender) {
+          const msgDiv = document.createElement("div");
+          msgDiv.className = "message " + sender;
+          const bubble = document.createElement("div");
+          bubble.className = "bubble";
+          let processedText = text.replace(
+            /\*\*(.*?)\*\*/g,
+            "<strong>$1</strong>"
+          );
+          bubble.innerHTML = processedText;
+          msgDiv.appendChild(bubble);
+          const atBottom =
+            chatWindow.scrollHeight -
+              chatWindow.clientHeight -
+              chatWindow.scrollTop <
+            5;
+          chatWindow.appendChild(msgDiv);
+          if (atBottom) {
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+        }
+
+        function enableInput() {
           chatInput.disabled = false;
           sendButton.disabled = chatInput.value.trim().length === 0;
           chatInput.focus();
-      }
+        }
 
-      function disableInput() {
+        function disableInput() {
           chatInput.disabled = true;
           sendButton.disabled = true;
-      }
+        }
 
-      // --- Fetch Locations from Workflow 3 (expects end_date) ---
-      async function fetchLocations(restaurantId) {
-          disableInput();
-          appendMessage('Fetching available branches...', 'bot');
-          const url = `${N8N_WORKFLOW3_BASE_URL}${encodeURIComponent(restaurantId)}`;
+        // --- NEW: Check Restaurant Status via N8N ---
+        async function checkRestaurantStatus(restaurantId) {
           try {
-              const response = await fetch(url);
-              if (!response.ok) {
-                  throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              const data = await response.json();
-              return data;
+            const response = await fetch(N8N_CHECK_AVAILABILITY_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ restaurant_id: restaurantId }),
+            });
+            if (!response.ok) {
+              // If the webhook returns an error (like 403), it's unavailable
+              return false;
+            }
+            const data = await response.json();
+            return data.status === "available";
           } catch (error) {
-              console.error('Error fetching locations:', error);
-              appendMessage('Failed to load branches. Please try refreshing the page or check the restaurant ID.', 'bot');
-              return [];
+            console.error("Error checking restaurant status:", error);
+            return false; // Default to inactive on any fetch error
           }
-      }
+        }
 
-      // --- Handle Location Selection (includes subscription check) ---
-      async function handleLocationSelection(userText) {
+        // --- Fetch Locations (No longer checks dates) ---
+        async function fetchLocations(restaurantId) {
+          disableInput();
+          appendMessage("Fetching available branches...", "bot");
+          const url = `${N8N_GET_LOCATIONS_URL}${encodeURIComponent(
+            restaurantId
+          )}`;
+          try {
+            const response = await fetch(url);
+            if (!response.ok)
+              throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+          } catch (error) {
+            console.error("Error fetching locations:", error);
+            appendMessage(
+              "Failed to load branches. Please try refreshing.",
+              "bot"
+            );
+            return [];
+          }
+        }
+
+        // --- Handle Location Selection (Simplified) ---
+        async function handleLocationSelection(userText) {
           let matchedLocation = null;
           const numInput = parseInt(userText);
 
-          if (!isNaN(numInput) && numInput > 0 && numInput <= availableLocations.length) {
-              matchedLocation = availableLocations[numInput - 1];
+          if (
+            !isNaN(numInput) &&
+            numInput > 0 &&
+            numInput <= availableLocations.length
+          ) {
+            matchedLocation = availableLocations[numInput - 1];
           } else {
-              for (const loc of availableLocations) {
-                  if (userText.toLowerCase().includes(loc.location_name.toLowerCase())) {
-                      matchedLocation = loc;
-                      break;
-                  }
+            for (const loc of availableLocations) {
+              if (
+                userText.toLowerCase().includes(loc.location_name.toLowerCase())
+              ) {
+                matchedLocation = loc;
+                break;
               }
+            }
           }
 
           if (matchedLocation) {
-              const endDate = new Date(matchedLocation.end_date);
-              const now = new Date();
-
-              if (endDate > now) { 
-                  selectedLocationId = matchedLocation.location_id;
-                  appendMessage(`Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today regarding their menu or services?`, 'bot');
-                  enableInput(); 
-                  return true; 
-              } else {
-                  appendMessage(`Sorry, the subscription for the **${matchedLocation.location_name}** branch has expired. This chat is currently unavailable for this branch.`, 'bot');
-
-                  const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > now);
-
-                  if (activeLocationsForPrompt.length === 0) {
-                      appendMessage('Unfortunately, all branches for this restaurant currently have expired subscriptions. This chat is unavailable.', 'bot');
-                      disableInput(); 
-                  } else {
-                      let promptMessage = 'Please select another active branch by typing its **name** or **number** from the list:\n';
-                      activeLocationsForPrompt.forEach((loc) => {
-                          promptMessage += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
-                      });
-                      appendMessage(promptMessage, 'bot');
-                      enableInput();
-                  }
-                  return false; 
-              }
-          } else {
-              let promptMessage = 'Sorry, I don\'t recognize that branch. Please select a branch by typing its **name** or **number** from the list:\n';
-              const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > new Date());
-              
-              if (activeLocationsForPrompt.length === 0) {
-                  promptMessage = 'Unfortunately, all branches for this restaurant currently have expired subscriptions. This chat is unavailable.';
-                  disableInput();
-              } else {
-                  activeLocationsForPrompt.forEach((loc) => {
-                      promptMessage += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
-                  });
-                  enableInput();
-              }
-              appendMessage(promptMessage, 'bot');
-              return false;
-          }
-      }
-
-      // --- Main Send Message Function ---
-      sendButton.addEventListener('click', sendMessage);
-      chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !sendButton.disabled) {
-          sendMessage();
-        }
-      });
-
-      chatInput.addEventListener('input', () => {
-          sendButton.disabled = chatInput.value.trim().length === 0;
-      });
-
-      async function sendMessage() {
-        const userText = chatInput.value.trim();
-        if (!userText) return;
-
-        appendMessage(userText, 'user');
-        chatInput.value = '';
-        disableInput();
-
-        if (userText.toLowerCase() === 'change branch' || userText.toLowerCase() === 'switch branch' || userText.toLowerCase() === 'new branch') {
-            selectedLocationId = ''; 
-            appendMessage('Okay, resetting the selected branch. Please choose a new branch:', 'bot');
-
-            const queryParams = getQueryParams();
-            const restaurantName = queryParams.restaurant_name || 'Restaurant';
-
-            const now = new Date();
-            const activeLocationsForPrompt = availableLocations.filter(loc => new Date(loc.end_date) > now);
-
-            if (activeLocationsForPrompt.length === 0) {
-                appendMessage('Unfortunately, there are no active branches available for chat at this restaurant. This chat is unavailable.', 'bot');
-                disableInput();
-                return; 
-            }
-
-            let locationPrompt = 'Which active branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
-            activeLocationsForPrompt.forEach((loc) => {
-                locationPrompt += `${availableLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
-            });
-            appendMessage(locationPrompt, 'bot');
+            selectedLocationId = matchedLocation.location_id;
+            appendMessage(
+              `Okay, you've selected the **${matchedLocation.location_name}** branch. How can I help you today?`,
+              "bot"
+            );
             enableInput();
-            return; 
+            return true;
+          } else {
+            let promptMessage =
+              "Sorry, I don't recognize that branch. Please select a branch by typing its **name** or **number** from the list:\n";
+            availableLocations.forEach((loc, index) => {
+              promptMessage += `${index + 1}. ${loc.location_name}\n`;
+            });
+            appendMessage(promptMessage, "bot");
+            enableInput();
+            return false;
+          }
         }
 
-        if (!selectedLocationId) {
-            const locationChosen = await handleLocationSelection(userText);
-            if (!locationChosen) {
-                return;
-            }
+        // --- Main Send Message Function ---
+        async function sendMessage() {
+          const userText = chatInput.value.trim();
+          if (!userText) return;
+
+          appendMessage(userText, "user");
+          chatInput.value = "";
+          disableInput();
+
+          if (userText.toLowerCase() === "change branch") {
+            selectedLocationId = "";
+            appendMessage(
+              "Okay, resetting the selected branch. Please choose a new branch:",
+              "bot"
+            );
+            let locationPrompt = "Which branch would you like to chat about?\n";
+            availableLocations.forEach((loc, index) => {
+              locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+            });
+            appendMessage(locationPrompt, "bot");
             enableInput();
             return;
-        }
+          }
 
-        const webhookUrl = `${N8N_WORKFLOW2_BASE_URL}${encodeURIComponent(currentRestaurantId)}`;
+          if (!selectedLocationId) {
+            await handleLocationSelection(userText);
+            return;
+          }
 
-        try {
-          const typingNode = document.createElement('div');
-          typingNode.className = 'message bot';
-          typingNode.id = 'typingIndicator';
-          typingNode.innerHTML = '<div class="bubble">Typing...</div>';
-          chatWindow.appendChild(typingNode);
-          chatWindow.scrollTop = chatWindow.scrollHeight;
+          const webhookUrl = `${N8N_CHAT_URL}${encodeURIComponent(
+            currentRestaurantId
+          )}`;
 
-          const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+          try {
+            const typingNode = document.createElement("div");
+            typingNode.className = "message bot";
+            typingNode.id = "typingIndicator";
+            typingNode.innerHTML = '<div class="bubble">Typing...</div>';
+            chatWindow.appendChild(typingNode);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            const response = await fetch(webhookUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
                 message: userText,
                 userSessionId: userSessionId,
-                location_id: selectedLocationId 
-            })
-          });
+                location_id: selectedLocationId,
+              }),
+            });
 
-          const indicator = document.getElementById('typingIndicator');
-          if (indicator) indicator.remove(); 
+            document.getElementById("typingIndicator")?.remove();
+            if (!response.ok) throw new Error(`Network response was not ok`);
 
-          if (!response.ok) {
-            throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+            const data = await response.json();
+            appendMessage(data.response, "bot");
+
+            if (
+              data.response.includes("Your order is confirmed!") ||
+              data.response.includes("طلبك مؤكد!")
+            ) {
+              localStorage.removeItem("userSessionId");
+              disableInput();
+            }
+          } catch (err) {
+            document.getElementById("typingIndicator")?.remove();
+            appendMessage(
+              "❌ Error contacting the server. Please try again.",
+              "bot"
+            );
+            console.error("Fetch error:", err);
+          } finally {
+            if (!chatInput.disabled) enableInput();
           }
-          const data = await response.json();
-          appendMessage(data.response, 'bot'); 
-          // --- START OF NEW LOGIC ---
-          const botMessageContent = data.response; // Get the bot's response text
-          const confirmationEnglish = "Your order is confirmed!";
-          const confirmationArabic = "طلبك مؤكد!";
-
-          if (botMessageContent.includes(confirmationEnglish) || botMessageContent.includes(confirmationArabic)) {
-              localStorage.removeItem('userSessionId');
-              disableInput(); 
-              console.log('Order confirmed! userSessionId cleared from localStorage.');
-              // Optional: You might want to provide more immediate visual feedback
-              // For example, disable the input and show a "Start New Order" button
-              // or a "Thank You" message and then a "New Chat" button.
-              // For now, it will just clear the session in the background.
-          }
-          // --- END OF NEW LOGIC ---
-        } catch (err) {
-          const indicator = document.getElementById('typingIndicator');
-          if (indicator) indicator.remove();
-
-          appendMessage('❌ Error contacting the server. Please try again.', 'bot');
-          console.error('Fetch error:', err);
-        } finally {
-            enableInput(); 
         }
-      }
 
-      // --- Initialization on Page Load ---
-      document.addEventListener('DOMContentLoaded', async () => {
-          userSessionId = localStorage.getItem('userSessionId');
-          if (!userSessionId) {
-              userSessionId = generateUUID();
-              localStorage.setItem('userSessionId', userSessionId);
-          }
-          console.log("Current User Session ID:", userSessionId);
+        sendButton.addEventListener("click", sendMessage);
+        chatInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !sendButton.disabled) sendMessage();
+        });
+        chatInput.addEventListener("input", () => {
+          sendButton.disabled = chatInput.value.trim().length === 0;
+        });
+
+        // --- Initialization on Page Load (UPDATED) ---
+        document.addEventListener("DOMContentLoaded", async () => {
+          userSessionId =
+            localStorage.getItem("userSessionId") || generateUUID();
+          localStorage.setItem("userSessionId", userSessionId);
 
           const queryParams = getQueryParams();
-          currentRestaurantId = queryParams.restaurant_id || '';
-          const restaurantName = queryParams.restaurant_name || 'Restaurant';
-
-          if (restaurantName) {
-            headerEl.textContent = `Chatting with ${decodeURIComponent(restaurantName)}`;
-          } else {
-            headerEl.textContent = `Chatting with Restaurant ${currentRestaurantId || 'Unknown'}`;
-          }
+          currentRestaurantId = queryParams.restaurant_id || "";
+          const restaurantName = queryParams.restaurant_name || "Restaurant";
+          headerEl.textContent = `Chatting with ${decodeURIComponent(
+            restaurantName
+          )}`;
 
           if (!currentRestaurantId) {
-            headerEl.textContent = 'Error: Missing Restaurant ID';
-            const warn = document.createElement('div');
-            warn.className = 'notification';
-            warn.textContent = 'This chat page requires a ?restaurant_id=... parameter in the URL.';
-            chatWindow.appendChild(warn);
-            disableInput(); 
+            headerEl.textContent = "Error: Missing Restaurant ID";
+            appendMessage(
+              "This chat page requires a ?restaurant_id=... parameter in the URL.",
+              "bot"
+            );
+            disableInput();
             return;
           }
 
-          appendMessage('Hello! Preparing the chat for you...', 'bot');
+          appendMessage("Hello! Checking restaurant availability...", "bot");
 
-          const fetchedAllLocations = await fetchLocations(currentRestaurantId);
-          availableLocations = fetchedAllLocations; 
+          // NEW: Check status first
+          const isRestaurantActive = await checkRestaurantStatus(
+            currentRestaurantId
+          );
 
-          const now = new Date();
-          const activeLocations = fetchedAllLocations.filter(loc => new Date(loc.end_date) > now);
-
-          if (activeLocations.length === 0) {
-              appendMessage('Unfortunately, no active branches are currently available for chat at this restaurant. This chat is unavailable.', 'bot');
-              disableInput(); 
-          } else if (activeLocations.length === 1) {
-              selectedLocationId = activeLocations[0].location_id;
-              appendMessage(`You are chatting with the **${activeLocations[0].location_name}** branch.`, 'bot');
-              appendMessage('How can I assist you today?', 'bot');
-              enableInput(); 
-          } else {
-              let locationPrompt = 'Welcome! Which active branch of **' + decodeURIComponent(restaurantName) + '** would you like to chat about?\n';
-              activeLocations.forEach((loc) => {
-                  locationPrompt += `${fetchedAllLocations.indexOf(loc) + 1}. ${loc.location_name}\n`;
-              });
-              appendMessage(locationPrompt, 'bot');
-              enableInput(); 
+          if (!isRestaurantActive) {
+            appendMessage(
+              "This restaurant is currently unavailable for chat due to a subscription or credit issue. Please contact the restaurant owner.",
+              "bot"
+            );
+            disableInput();
+            return;
           }
-      });
-    })();
-  </script>
-</body>
+
+          // If active, proceed to fetch locations
+          const allLocations = await fetchLocations(currentRestaurantId);
+          availableLocations = allLocations;
+
+          if (availableLocations.length === 0) {
+            appendMessage(
+              "This restaurant has no active branches configured for chat.",
+              "bot"
+            );
+            disableInput();
+          } else if (availableLocations.length === 1) {
+            selectedLocationId = availableLocations[0].location_id;
+            appendMessage(
+              `You are chatting with the **${availableLocations[0].location_name}** branch.`,
+              "bot"
+            );
+            appendMessage("How can I assist you today?", "bot");
+            enableInput();
+          } else {
+            let locationPrompt =
+              "Welcome! Which branch of **" +
+              decodeURIComponent(restaurantName) +
+              "** would you like to chat about?\n";
+            availableLocations.forEach((loc, index) => {
+              locationPrompt += `${index + 1}. ${loc.location_name}\n`;
+            });
+            appendMessage(locationPrompt, "bot");
+            enableInput();
+          }
+        });
+      })();
+    </script>
+  </body>
 </html>
