@@ -242,18 +242,17 @@
               body: JSON.stringify({ restaurant_id: restaurantId }),
             });
             if (!response.ok) {
-              // If the webhook returns an error (like 403), it's unavailable
               return false;
             }
             const data = await response.json();
             return data.status === "available";
           } catch (error) {
             console.error("Error checking restaurant status:", error);
-            return false; // Default to inactive on any fetch error
+            return false;
           }
         }
 
-        // --- Fetch Locations (No longer checks dates) ---
+        // --- Fetch Locations ---
         async function fetchLocations(restaurantId) {
           disableInput();
           appendMessage("Fetching available branches...", "bot");
@@ -275,7 +274,7 @@
           }
         }
 
-        // --- Handle Location Selection (Simplified) ---
+        // --- Handle Location Selection ---
         async function handleLocationSelection(userText) {
           let matchedLocation = null;
           const numInput = parseInt(userText);
@@ -317,7 +316,7 @@
           }
         }
 
-        // --- Main Send Message Function ---
+        // --- Main Send Message Function (CORRECTED) ---
         async function sendMessage() {
           const userText = chatInput.value.trim();
           if (!userText) return;
@@ -350,14 +349,14 @@
             currentRestaurantId
           )}`;
 
-          try {
-            const typingNode = document.createElement("div");
-            typingNode.className = "message bot";
-            typingNode.id = "typingIndicator";
-            typingNode.innerHTML = '<div class="bubble">Typing...</div>';
-            chatWindow.appendChild(typingNode);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+          const typingNode = document.createElement("div");
+          typingNode.className = "message bot";
+          typingNode.id = "typingIndicator";
+          typingNode.innerHTML = '<div class="bubble">Typing...</div>';
+          chatWindow.appendChild(typingNode);
+          chatWindow.scrollTop = chatWindow.scrollHeight;
 
+          try {
             const response = await fetch(webhookUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -368,28 +367,33 @@
               }),
             });
 
-            document.getElementById("typingIndicator")?.remove();
             if (!response.ok) throw new Error(`Network response was not ok`);
 
             const data = await response.json();
             appendMessage(data.response, "bot");
 
+            // Check if the conversation is over
             if (
               data.response.includes("Your order is confirmed!") ||
               data.response.includes("طلبك مؤكد!")
             ) {
               localStorage.removeItem("userSessionId");
-              disableInput();
+              // Input remains disabled because the order is complete.
+            } else {
+              // If the conversation is not over, re-enable the input.
+              enableInput();
             }
           } catch (err) {
-            document.getElementById("typingIndicator")?.remove();
             appendMessage(
               "❌ Error contacting the server. Please try again.",
               "bot"
             );
             console.error("Fetch error:", err);
+            // Re-enable input on error so the user can try again.
+            enableInput();
           } finally {
-            if (!chatInput.disabled) enableInput();
+            // Remove the typing indicator regardless of success or failure.
+            document.getElementById("typingIndicator")?.remove();
           }
         }
 
@@ -401,7 +405,7 @@
           sendButton.disabled = chatInput.value.trim().length === 0;
         });
 
-        // --- Initialization on Page Load (UPDATED) ---
+        // --- Initialization on Page Load ---
         document.addEventListener("DOMContentLoaded", async () => {
           userSessionId =
             localStorage.getItem("userSessionId") || generateUUID();
@@ -426,7 +430,6 @@
 
           appendMessage("Hello! Checking restaurant availability...", "bot");
 
-          // NEW: Check status first
           const isRestaurantActive = await checkRestaurantStatus(
             currentRestaurantId
           );
@@ -440,7 +443,6 @@
             return;
           }
 
-          // If active, proceed to fetch locations
           const allLocations = await fetchLocations(currentRestaurantId);
           availableLocations = allLocations;
 
